@@ -45,3 +45,6 @@ hpcex:
 	cabal build sample-test
 	./dist/build/sample-test/sample-test
 	./dist/build/mucheck/mucheck -tix sample-test.tix Examples/AssertCheckTest.hs
+
+install-all: install
+	for i in ../mucheck-smallcheck ../mucheck-quickcheck ../mucheck-hunit ../mucheck-hspec; do (cd $$i; make install ); done

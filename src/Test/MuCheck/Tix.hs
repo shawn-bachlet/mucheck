@@ -6,11 +6,31 @@ import Trace.Hpc.Mix
 import Trace.Hpc.Util
 
 -- | Span info - same as HpcPos
-type Span = HpcPos
+-- but we have to make it separately because HpcPos constructors are hidden and
+-- hence Generic deriving tricker does not work.
+data Span = P !Int !Int !Int !Int deriving (Eq, Ord)
 
--- | Convert a 4-tuple to a span
-toSpan :: (Int, Int, Int, Int) -> Span
-toSpan = toHpcPos
+instance Show Span where
+  show (P l1 c1 l2 c2) = show l1 ++ ':' : show c1 ++ '-' : show l2 ++ ':' : show c2
+
+-- | 'fromSpan' explodes the Span into line:column-line:colunm
+fromSpan :: Span -> (Int,Int,Int,Int)
+fromSpan (P l1 c1 l2 c2) = (l1,c1,l2,c2)
+--
+-- | 'toSpan' implodes to Span, from line:column-line:colunm
+toSpan :: (Int,Int,Int,Int) -> Span
+toSpan (l1,c1,l2,c2) = P l1 c1 l2 c2
+
+
+-- | asks the question, is the first argument inside the second argument.
+insideSpan :: Span -> Span -> Bool
+insideSpan small big =
+	     sl1 >= bl1 &&
+	     (sl1 /= bl1 || sc1 >= bc1) &&
+	     sl2 <= bl2 &&
+	     (sl2 /= bl2 || sc2 <= bc2)
+  where (sl1,sc1,sl2,sc2) = fromSpan small
+        (bl1,bc1,bl2,bc2) = fromSpan big
 
 -- | Whether a line is covered or not
 data TCovered = TCovered
@@ -21,10 +41,6 @@ data TCovered = TCovered
 isCovered :: TCovered -> Bool
 isCovered TCovered = True
 isCovered _  = False
-
--- | insideSpan small big
-insideSpan :: Span -> Span -> Bool
-insideSpan = insideHpcPos
 
 -- | `mixTix` joins together the location and coverage data.
 mixTix :: String -> Mix -> TixModule -> (String, [(Span, TCovered)])

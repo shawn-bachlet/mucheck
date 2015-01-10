@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 -- | MuCheck base module
-module Test.MuCheck (mucheck) where
+module Test.MuCheck (mucheck, sampler) where
 
 import Control.Monad (liftM)
 import Test.MuCheck.Mutation
