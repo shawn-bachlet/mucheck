@@ -84,3 +84,8 @@ See the project pages on how to use them.
 * [mucheck-hunit](https://bitbucket.org/osu-testing/mucheck-hunit)
 * [mucheck-hspec](https://bitbucket.org/osu-testing/mucheck-hspec)
 
+See alos the distributed version that allows parallel mutant execution across
+machines.
+* [d-mucheck](https://bitbucket.org/osu-testing/d-mucheck)
+
+
