@@ -75,4 +75,11 @@ the functions to leave alone while mutating.
 Take a look at the `Examples/AssertCheckTest.hs` to see how mucheck expects the
 module to be.
 
+## QuickCheck
+
+At this point, only quickcheck adapter is updated to MuCheck 0.4.0.0
+
+See the
+[mucheck-quickcheck](https://bitbucket.org/osu-testing/mucheck-quickcheck)
+project page for how to use it.
 
