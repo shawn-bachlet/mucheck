@@ -1,5 +1,4 @@
 test.log
-Examples/*
 dist/*
 .gitignore
 .cabal-sandbox/*
