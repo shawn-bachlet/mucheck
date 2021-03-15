@@ -36,11 +36,12 @@ library
                     Test.MuCheck.Utils.Syb,
                     Test.MuCheck.Utils.Common,
                     Test.MuCheck.Utils.Print,
-                    Test.MuCheck.TestAdapter
-                    Test.MuCheck.TestAdapter.AssertCheck
-                    Test.MuCheck.TestAdapter.AssertCheckAdapter
-                    Test.MuCheck.AnalysisSummary
-                    Test.MuCheck.Utils.Helpers
+                    Test.MuCheck.TestAdapter,
+                    Test.MuCheck.TestAdapter.AssertCheck,
+                    Test.MuCheck.TestAdapter.AssertCheckAdapter,
+                    Test.MuCheck.TestAdapter.HspecAdapter,
+                    Test.MuCheck.AnalysisSummary,
+                    Test.MuCheck.Utils.Helpers,
                     Test.MuCheck.Tix
   ghc-options:      -Wall
   build-depends:    base >=4 && <5,
@@ -54,6 +55,7 @@ library
                     temporary >= 1.1,
                     hashable >= 1.2,
                     hpc >= 0.5.1.1,
+                    hspec-core,
                     ghcid,
                     stm,
                     extra,
