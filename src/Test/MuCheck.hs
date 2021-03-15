@@ -21,15 +21,16 @@ import Test.MuCheck.AnalysisSummary
 
 mucheck :: (Show b, Summarizable b, TRun a b) =>
      a                                                     -- ^ The module we are mutating
+  -> String                                                -- ^ The ghcid command
   -> FilePath                                              -- ^ The HPC <coverage>.tix file
   -> IO (MAnalysisSummary, [MutantSummary])                -- ^ Returns a tuple of full summary, and individual mutant results.
-mucheck moduleFile tix = do
+mucheck moduleFile ghcidCmd tix = do
   -- get tix here.
   (len, mutants) <- genMutants (getName moduleFile) tix
   -- Should we do random sample on covering alone or on the full?
   smutants <- sampler defaultConfig mutants
   tests <- getAllTests (getName moduleFile)
-  (fsum', msum) <- evaluateMutants moduleFile smutants (map (genTest moduleFile) tests)
+  (fsum', msum) <- evaluateMutants moduleFile ghcidCmd smutants (map (genTest moduleFile) tests)
   -- set the original size of mutants. (We report the results based on original
   -- number of mutants, not just the covered ones.)
   let fsum = case len of

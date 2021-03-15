@@ -11,10 +11,12 @@ main = do
   val <- getArgs
   case val of
     ("-h" : _ ) -> help
-    ("-tix" : tix: file: _ ) -> do (msum, _tsum) <- mucheck (toRun file :: AssertCheckRun) tix
-                                   print msum
-    (file : _args) -> do (msum, _tsum) <- mucheck (toRun file :: AssertCheckRun) []
-                         print msum
+    ("-tix" : tix : ghcidCmd : file: _ ) -> do
+      (msum, _tsum) <- mucheck (toRun file :: AssertCheckRun) ghcidCmd tix
+      print msum
+    (ghcidCmd : file : _args) -> do
+      (msum, _tsum) <- mucheck (toRun file :: AssertCheckRun) ghcidCmd ""
+      print msum
     _ -> error "Need function file [args]\n\tUse -h to get help"
 
 help :: IO ()
