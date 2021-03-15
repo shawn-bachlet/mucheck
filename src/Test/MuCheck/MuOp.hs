@@ -19,10 +19,14 @@ module Test.MuCheck.MuOp (MuOp
           , getSpan
           ) where
 
-import qualified Data.Generics as G
 import Control.Monad (MonadPlus, mzero)
+import qualified Data.Generics as G
 
-import Language.Haskell.Exts.Annotated(Module, Name, QName, QOp, Exp, Decl, Literal, GuardedRhs, Annotation, SrcSpanInfo(..), srcSpanStart, srcSpanEnd, prettyPrint, Pretty(), Annotated(..))
+import Language.Haskell.Exts.Pretty (Pretty(), prettyPrint)
+import Language.Haskell.Exts.SrcLoc (SrcSpanInfo(..), srcSpanEnd, srcSpanStart)
+import Language.Haskell.Exts.Syntax
+  ( Annotated(..), Annotation, Decl, Exp, GuardedRhs, Literal, Module, Name, QName, QOp
+  )
 
 -- | SrcSpanInfo wrapper
 type Module_ = Module SrcSpanInfo

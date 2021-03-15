@@ -1,16 +1,15 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Test.MuCheck.MutationSpec where
 
+import Control.Monad (MonadPlus, mplus, mzero)
+import Data.Generics (Data, GenericQ, Typeable, listify, mkMp, mkQ)
+import Data.String.Here (i)
+import System.Random
+import Test.Hspec
+import Test.MuCheck.MuOp ((==>), MuOp, mkMpMuOp)
+import Test.MuCheck.Mutation
 import qualified Test.MuCheck.MutationSpec.Helpers as H
 import qualified Test.MuCheck.Utils.Helpers
-import Test.Hspec
-import System.Random
-import Test.MuCheck.Mutation
-import Control.Monad (MonadPlus, mplus, mzero)
-import Test.MuCheck.MuOp (mkMpMuOp, MuOp, (==>))
-import Data.Generics (GenericQ, mkQ, Data, Typeable, mkMp, listify)
-import Language.Haskell.Exts.Annotated
-import Here
 
 main :: IO ()
 main = hspec spec
@@ -19,122 +18,107 @@ spec :: Spec
 spec = do
   describe "selectLitOps" $ do
     it "returns binarylit muops" $ do
-      let text = [e|
+      let text = [i|
 module Prop where
 import Test.QuickCheck
 
 myFn x = if x == 1 then True else False
 |]
-          res =  [[e|
-{
+          res =  [[i|{
 1
 } ==> {
 2
-}
-|],[e|
-{
+}|],[i|{
 1
 } ==> {
 0
-}
-|],[e|
-{
+}|],[i|{
 1
 } ==> {
 1
-}
-|] ]
+}|] ]
 
       map show (selectLitOps (getASTFromStr text)) `shouldBe` res
 
   describe "selectBLitOps" $ do
     it "returns binarylit muops" $ do
-      let text = [e|
+      let text = [i|
 module Prop where
 import Test.QuickCheck
 
 myFn x = if x == 1 then True else False
 |]
-          res =  [[e|
-{
+          res =  [[i|{
 True
 } ==> {
 False
-}
-|],[e|
-{
+}|],[i|{
 False
 } ==> {
 True
-}
-|] ]
+}|] ]
       map show (selectBLitOps (getASTFromStr text)) `shouldBe` res
 
 
   describe "selectIfElseBoolNegOps" $ do
     it "returns ifelse muops" $ do
-      let text = [e|
+      let text = [i|
 module Prop where
 import Test.QuickCheck
 
 myFn x = if x == 1 then True else False
 |]
-          res =  [[e|
-{
+          res =  [[i|{
 if x == 1 then True else False
 } ==> {
 if x == 1 then False else True
-}
-|]]
+}|]]
       map show (selectIfElseBoolNegOps (getASTFromStr text)) `shouldBe` res
 
   describe "selectGuardedBoolNegOps" $ do
     it "returns guardedboolean muops" $ do
-      let text = [e|
+      let text = [i|
 module Prop where
 import Test.QuickCheck
 
 myFn x | x == 1 = True
 myFn   | otherwise = False
 |]
-          res =  [[e|
-{
+          res =  [[i|{
 | x == 1 = True
 } ==> {
 | not (x == 1) = True
-}
-|]]
+}|]]
       map show (selectGuardedBoolNegOps (getASTFromStr text)) `shouldBe` res
 
   describe "selectFnMatches" $ do
     it "returns fn muops" $ do
-      let text = [e|
+      let text = [i|
 module Prop where
 import Test.QuickCheck
 
 myFn [] = 0
 myFn (x:xs) = 1 + myFn xs
 |]
-          res =  [[e|
-{
+          res =  [[i|{
 myFn [] = 0
 myFn (x : xs) = 1 + myFn xs
 } ==> {
 myFn (x : xs) = 1 + myFn xs
 myFn [] = 0
-}|],[e|{
+}|],[i|{
 myFn [] = 0
 myFn (x : xs) = 1 + myFn xs
 } ==> {
 myFn [] = 0
-}|],[e|{
+}|],[i|{
 myFn [] = 0
 myFn (x : xs) = 1 + myFn xs
 } ==> {
 myFn (x : xs) = 1 + myFn xs
 }|]]
       map show (selectFnMatches (getASTFromStr text)) `shouldBe` res
- 
+
 
 {-
   describe "selectGuardedBoolNegOps" $ do

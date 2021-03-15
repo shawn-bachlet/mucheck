@@ -3,18 +3,18 @@
 -- evaluate mutants.
 module Test.MuCheck.Interpreter (evaluateMutants, evalMethod, evalMutant, evalTest, summarizeResults, MutantSummary(..)) where
 
-import qualified Language.Haskell.Interpreter as I
-import Control.Monad.Trans (liftIO)
 import Control.Monad (liftM)
-import Data.Typeable
+import Control.Monad.Trans (liftIO)
 import Data.Either (partitionEithers)
+import Data.Typeable
 import System.Directory (createDirectoryIfMissing)
 import System.Environment (withArgs)
+import qualified Language.Haskell.Interpreter as I
 
+import Test.MuCheck.AnalysisSummary
 import Test.MuCheck.TestAdapter
 import Test.MuCheck.Utils.Common
 import Test.MuCheck.Utils.Print
-import Test.MuCheck.AnalysisSummary
 
 
 -- | Data type to hold results of a single test execution
@@ -102,7 +102,7 @@ showE (I.GhcException e) = "GhcException: " ++ e
 -- | Run one single test on a mutant
 evalTest :: (Typeable a, Summarizable a) =>
     String                                 -- ^ The mutant _file_ that we have to evaluate (_not_ the content)
- -> String                                 -- ^ The file where we will write the stdout and stderr during the run. 
+ -> String                                 -- ^ The file where we will write the stdout and stderr during the run.
  -> TestStr                                -- ^ The test to be run
  -> IO (InterpreterOutput a)               -- ^ Returns the output of given test run
 evalTest mutantFile logF test = do
@@ -119,7 +119,7 @@ evalMethod :: (I.MonadInterpreter m, Typeable t) =>
   -> TestStr                              -- ^ The test to be run
   -> m t                                  -- ^ Returns the monadic computation to be run by I.runInterpreter
 evalMethod fileName evalStr = do
-  I.loadModules [fileName]
+  I.loadModules [fileName, "src/Test/MuCheck/TestAdapter/AssertCheck"]
   ms <- I.getLoadedModules
   I.setTopLevelModules ms
   I.interpret evalStr (I.as :: (Typeable a => IO a)) >>= liftIO

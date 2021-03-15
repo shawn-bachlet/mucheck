@@ -1,0 +1,13 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:MuCheck"
+
+    - path: "src/Main.hs"
+      component: "MuCheck:exe:mucheck"
+
+    - path: "./Examples/Main.hs"
+      component: "MuCheck:exe:sample-test"
+
+    - path: "test"
+      component: "MuCheck:test:spec"

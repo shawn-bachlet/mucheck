@@ -1,11 +1,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Test.MuCheck.MutationSpec.Helpers where
-import Here
-import Test.MuCheck.Utils.Helpers
+import Data.String.Here (i)
+import Language.Haskell.Exts.Syntax (Decl(FunBind))
 import Test.MuCheck.Mutation
-import Language.Haskell.Exts.Annotated
-_myprop = [e|
-module Prop where
+import Test.MuCheck.Utils.Helpers
+
+_myprop = [i| module Prop where
 import Test.QuickCheck
 
 myFn [] = 0
@@ -18,7 +18,7 @@ myProp1 xs = myFn [] == 0
 myProp2 xs = myFn [1,2,3] == 3
 |]
 
-_myprop_noann = [e|
+_myprop_noann = [i|
 module Prop where
 import Test.QuickCheck
 
@@ -32,7 +32,7 @@ ast = getASTFromStr
 decl = getDecl
 matches (FunBind l ms) = ms
 
-_qc = [e|
+_qc = [i|
 module Examples.QuickCheckTest where
 import Test.QuickCheck
 import Data.List
@@ -51,7 +51,7 @@ revProp xs = qsort xs == qsort (reverse xs)
 modelProp xs = qsort xs == sort xs
 |]
 
-_fullqc = [e|
+_fullqc = [i|
 module Examples.QuickCheckTest where
 import Test.QuickCheck
 import Data.List

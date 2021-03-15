@@ -3,4 +3,6 @@ dist/*
 .gitignore
 .cabal-sandbox/*
 cabal.sandbox.config
+.stack-work
+.mutants
 tags

@@ -1,7 +1,7 @@
 module Test.MuCheck.Utils.CommonSpec (main, spec) where
-import Test.Hspec
 import System.Random
-import Test.MuCheck.Utils.Common (replaceFst, choose, remElt, sample, sampleF, coupling)
+import Test.Hspec
+import Test.MuCheck.Utils.Common (choose, coupling, remElt, replaceFst, sample, sampleF)
 
 main :: IO ()
 main = hspec spec
@@ -32,11 +32,11 @@ spec = do
 
   describe "sample" $ do
     it "must sample a given size subset" $ do
-      sample (mkStdGen 1) 2 [1,2,3,4] `shouldBe` [2, 3]
+      sample (mkStdGen 1) 2 [1,2,3,4] `shouldMatchList` [2, 4]
 
   describe "sampleF" $ do
     it "must sample a given fraction subset" $ do
-      sampleF (mkStdGen 1) 0.5 [1,2,3,4] `shouldBe` [2, 3]
+      sampleF (mkStdGen 1) 0.5 [1,2,3,4] `shouldMatchList` [2, 4]
 
   describe "coupling" $ do
     it "must sample a given fraction subset" $ do

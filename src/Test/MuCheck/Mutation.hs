@@ -2,24 +2,32 @@
 -- | This module handles the mutation of different patterns.
 module Test.MuCheck.Mutation where
 
-import Language.Haskell.Exts.Annotated(Literal(Int, Char, Frac, String, PrimInt, PrimChar, PrimFloat, PrimDouble, PrimWord, PrimString),
-        Exp(App, Var, If, Lit), QName(UnQual),
-        Match(Match), Pat(PVar),
-        Stmt(Qualifier), Module(Module),
-        Name(Ident), Decl(FunBind, PatBind, AnnPragma),
-        GuardedRhs(GuardedRhs), Annotation(Ann), Name(Symbol, Ident),
-        prettyPrint, fromParseResult, parseModule, SrcSpanInfo(..), SrcSpan(..),
-        ModuleHead(..), ModuleName(..))
-import Data.Generics (Typeable, mkMp, listify)
-import Data.List(nub, (\\), permutations, partition)
 import Control.Monad (liftM)
+import Data.Generics (Typeable, listify, mkMp)
+import Data.List ((\\), nub, partition, permutations)
 
-import Test.MuCheck.Tix
-import Test.MuCheck.MuOp
-import Test.MuCheck.Utils.Syb
-import Test.MuCheck.Utils.Common
+import Language.Haskell.Exts (parseModule)
+import Language.Haskell.Exts.Parser (fromParseResult)
+import Language.Haskell.Exts.Pretty (prettyPrint)
+import Language.Haskell.Exts.SrcLoc (SrcSpan(SrcSpan), SrcSpanInfo(SrcSpanInfo))
+import Language.Haskell.Exts.Syntax
+  ( Annotation(Ann), Decl(AnnPragma, FunBind, PatBind), Exp(App, If, Lit, Var)
+  , GuardedRhs(GuardedRhs)
+  , Literal(Char, Frac, Int, PrimChar, PrimDouble, PrimFloat, PrimInt, PrimString, PrimWord, String)
+  , Match(Match), Module(Module), ModuleHead(ModuleHead), ModuleName(ModuleName)
+  , Name(Ident, Symbol), Pat(PVar), QName(UnQual), Stmt(Qualifier)
+  )
 import Test.MuCheck.Config
-import Test.MuCheck.TestAdapter
+  ( Config(muOp), FnOp(_fns, _type), FnType(FnIdent, FnSymbol), MuVar(..), defaultConfig
+  )
+import Test.MuCheck.MuOp
+  ( (==>*), Annotation_, Decl_, Exp_, GuardedRhs_, Literal_, Module_, MuOp, Mutable, Name_, getSpan
+  , mkMpMuOp
+  )
+import Test.MuCheck.TestAdapter (Mutant(..), toMutant)
+import Test.MuCheck.Tix (Span, getUnCoveredPatches, insideSpan, toSpan)
+import Test.MuCheck.Utils.Common (apTh, choose, spread)
+import Test.MuCheck.Utils.Syb (once, relevantOps)
 
 -- | The `genMutants` function is a wrapper to genMutantsWith with standard
 -- configuraton
@@ -282,7 +290,7 @@ selectGuardedBoolNegOps m = selectValOps isGuardedRhs convert m
         boolNegate (Qualifier l expr) = [Qualifier l (App l_ (Var l_ (UnQual l_ (Ident l_ "not"))) expr)]
         boolNegate _x = [] -- VERIFY
 
--- | dummy 
+-- | dummy
 l_ :: SrcSpanInfo
 l_ = SrcSpanInfo (SrcSpan "" 0 0 0 0) []
 

@@ -2,13 +2,14 @@
 -- | Module for adapting test framekworks
 module Test.MuCheck.TestAdapter where
 
-import qualified Language.Haskell.Interpreter as I
 import Data.Typeable
 import Test.MuCheck.Config
 import Test.MuCheck.Tix
+import qualified Language.Haskell.Interpreter as I
 
 -- | Wrapper for interpreter output
 data Summarizable a => InterpreterOutput a = Io {_io :: Either I.InterpreterError a, _ioLog::String}
+  deriving Show
 
 -- | Holding mutant information
 data Mutant = Mutant { _mutant::String, _mtype::MuVar, _mspan::Span}
