@@ -1,1 +1,0 @@
-Mix "Examples/Main.hs" 2021-03-12 19:17:17.045248673 UTC 2258571961 8 [(6:21-6:29,ExpBox False),(6:3-6:29,ExpBox False),(7:21-7:30,ExpBox False),(7:3-7:30,ExpBox False),(8:21-8:27,ExpBox False),(8:3-8:27,ExpBox False),(9:21-9:28,ExpBox False),(9:3-9:28,ExpBox False),(10:21-10:27,ExpBox False),(10:3-10:27,ExpBox False),(5:8-10:27,ExpBox False),(5:1-10:27,TopLevelBox ["main"])]

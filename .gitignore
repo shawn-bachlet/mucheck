@@ -6,3 +6,5 @@ cabal.sandbox.config
 .stack-work
 .mutants
 tags
+sample-test.tix
+.hpc
