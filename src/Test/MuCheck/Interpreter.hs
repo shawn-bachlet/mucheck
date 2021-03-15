@@ -1,3 +1,6 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections, MultiWayIf, DeriveDataTypeable, RecordWildCards #-}
 -- | The Interpreter module is responible for invoking the Hint interpreter to
 -- evaluate mutants.
@@ -7,14 +10,13 @@ import Control.Monad (liftM)
 import Control.Monad.Trans (liftIO)
 import Data.Either (partitionEithers)
 import Data.Typeable
+import Language.Haskell.Ghcid
 import System.Directory (createDirectoryIfMissing)
-import System.Environment (withArgs)
-import qualified Language.Haskell.Interpreter as I
-
 import Test.MuCheck.AnalysisSummary
 import Test.MuCheck.TestAdapter
 import Test.MuCheck.Utils.Common
 import Test.MuCheck.Utils.Print
+import qualified Language.Haskell.Interpreter as I
 
 
 -- | Data type to hold results of a single test execution
@@ -31,7 +33,11 @@ evaluateMutants :: (Show b, Summarizable b, TRun a b) =>
   -> [TestStr]                                                       -- ^ The tests to be used for analysis
   -> IO (MAnalysisSummary, [MutantSummary])                          -- ^ Returns a tuple of full run summary and individual mutant summary
 evaluateMutants m mutants tests = do
-  results <- mapM (evalMutant tests) mutants -- [InterpreterOutput t]
+  print $ length mutants
+  (ghci, _) <- startGhci "stack ghci" Nothing
+    (const . const $ pure ())
+  results <- mapM (evalMutant ghci tests) mutants -- [InterpreterOutput t]
+  stopGhci ghci
   let singleTestSummaries = map (summarizeResults m tests) $ zip mutants results
       ma  = fullSummary m tests results
   return (ma, singleTestSummaries)
@@ -56,10 +62,11 @@ summarizeResults m tests (mutant, ioresults) = case last results of -- the last 
 
 -- | Run all tests on a mutant
 evalMutant :: (Typeable t, Summarizable t) =>
-    [TestStr]                                                     -- ^ The tests to be used
+     Ghci
+  -> [TestStr]                                                     -- ^ The tests to be used
   -> Mutant                                                       -- ^ Mutant being tested
   -> IO [InterpreterOutput t]                                     -- ^ Returns the result of test runs
-evalMutant tests Mutant{..} = do
+evalMutant ghci tests Mutant{..} = do
   -- Hint does not provide us a way to evaluate the module without
   -- writing it to disk first, so we go for this hack.
   -- We write the temporary file to disk, run interpreter on it, get
@@ -71,7 +78,9 @@ evalMutant tests Mutant{..} = do
 
   writeFile mutantFile _mutant
   let logF = mutantFile ++ ".log"
-  stopFast (evalTest mutantFile logF) tests
+  _ <- exec ghci (":l " <> mutantFile)
+  print "*"
+  stopFast (evalTest ghci mutantFile logF) tests
 
 -- | Stop mutant runs at the first sign of problems (invalid mutants or test
 -- failure).
@@ -100,13 +109,15 @@ showE (I.NotAllowed e) = "Not Allowed: " ++ e
 showE (I.GhcException e) = "GhcException: " ++ e
 
 -- | Run one single test on a mutant
-evalTest :: (Typeable a, Summarizable a) =>
-    String                                 -- ^ The mutant _file_ that we have to evaluate (_not_ the content)
+evalTest :: forall a. (Typeable a, Summarizable a) =>
+    Ghci
+ -> String                                 -- ^ The mutant _file_ that we have to evaluate (_not_ the content)
  -> String                                 -- ^ The file where we will write the stdout and stderr during the run.
  -> TestStr                                -- ^ The test to be run
  -> IO (InterpreterOutput a)               -- ^ Returns the output of given test run
-evalTest mutantFile logF test = do
-  val <- withArgs [] $ catchOutput logF $ I.runInterpreter (evalMethod mutantFile test)
+evalTest ghci mutantFile logF test = do
+  -- val <- withArgs [] $ catchOutput logF $ I.runInterpreter (evalMethod mutantFile test)
+  val <- Right . parseResult . last <$> exec ghci test
   return Io {_io = val, _ioLog = logF}
 
 -- | Given the filename, modulename, test to evaluate, evaluate, and return result as a pair.

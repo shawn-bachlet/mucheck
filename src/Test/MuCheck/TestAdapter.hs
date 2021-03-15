@@ -8,7 +8,7 @@ import Test.MuCheck.Tix
 import qualified Language.Haskell.Interpreter as I
 
 -- | Wrapper for interpreter output
-data Summarizable a => InterpreterOutput a = Io {_io :: Either I.InterpreterError a, _ioLog::String}
+data InterpreterOutput a = Io {_io :: Either I.InterpreterError a, _ioLog::String}
   deriving Show
 
 -- | Holding mutant information
@@ -39,6 +39,8 @@ class Typeable s => Summarizable s where
   -- | Was the test run neither (gaveup/timedout)
   isOther :: s -> Bool
   isOther x = not (isSuccess x) && not (isFailure x)
+
+  parseResult :: String -> s
 
 -- | Specify the kind of test suite to run. The result processing, and also
 -- how the tests are run are based on this.
