@@ -1,11 +1,16 @@
 {-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, FunctionalDependencies #-}
 -- | Module for adapting test framekworks
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 module Test.MuCheck.TestAdapter where
 
 import Data.Typeable
 import Test.MuCheck.Config
 import Test.MuCheck.Tix
 import qualified Language.Haskell.Interpreter as I
+import GHC.Generics (Generic)
+import qualified Data.Aeson as A
 
 -- | Wrapper for interpreter output
 data InterpreterOutput a = Io {_io :: Either I.InterpreterError a, _ioLog::String}
@@ -40,7 +45,11 @@ class Typeable s => Summarizable s where
   isOther :: s -> Bool
   isOther x = not (isSuccess x) && not (isFailure x)
 
-  parseResult :: String -> s
+  parseResult :: [String] -> s
+
+data TestRunner = AssertCheck | Hspec
+  deriving stock (Show, Generic)
+  deriving anyclass A.FromJSON
 
 -- | Specify the kind of test suite to run. The result processing, and also
 -- how the tests are run are based on this.

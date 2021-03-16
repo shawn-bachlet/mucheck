@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,54 +21,56 @@ import qualified Language.Haskell.Interpreter as I
 
 
 -- | Data type to hold results of a single test execution
-data MutantSummary = MSumError Mutant String [Summary]         -- ^ Capture the error if one occured
-                   | MSumAlive Mutant [Summary]                -- ^ The mutant was alive
-                   | MSumKilled Mutant [Summary]               -- ^ The mutant was kileld
-                   | MSumOther Mutant [Summary]                -- ^ Undetermined - we will treat it as killed as it is not a success.
+data MutantSummary = MSumError Mutant String Summary         -- ^ Capture the error if one occured
+                   | MSumAlive Mutant Summary                -- ^ The mutant was alive
+                   | MSumKilled Mutant Summary               -- ^ The mutant was kileld
+                   | MSumOther Mutant Summary                -- ^ Undetermined - we will treat it as killed as it is not a success.
                    deriving (Show, Typeable)
 
 -- | Given the list of tests suites to check, run the test suite on mutants.
 evaluateMutants :: (Show b, Summarizable b, TRun a b) =>
      a                                                               -- ^ The module to be evaluated
   -> String                                                          -- ^ The ghcid command
+  -> FilePath                                                        -- ^ The test file
+  -> String                                                          -- ^ The test command
   -> [Mutant]                                                        -- ^ The mutants to be evaluated
-  -> [TestStr]                                                       -- ^ The tests to be used for analysis
   -> IO (MAnalysisSummary, [MutantSummary])                          -- ^ Returns a tuple of full run summary and individual mutant summary
-evaluateMutants m ghcidCmd mutants tests = do
+evaluateMutants m ghcidCmd testFile testCmd mutants = do
   print $ length mutants
   (ghci, _) <- startGhci ghcidCmd Nothing
     (const . const $ pure ())
-  results <- mapM (evalMutant ghci tests) mutants -- [InterpreterOutput t]
+  results <- mapM (evalMutant ghci testFile testCmd) mutants -- [InterpreterOutput t]
   stopGhci ghci
-  let singleTestSummaries = map (summarizeResults m tests) $ zip mutants results
-      ma  = fullSummary m tests results
+  let singleTestSummaries = map (summarizeResults m testCmd) $ zip mutants results
+      ma  = fullSummary m testCmd results
   return (ma, singleTestSummaries)
 
 -- | The `summarizeResults` function evaluates the results of a test run
 -- using the supplied `isSuccess` and `testSummaryFn` functions from the adapters
 summarizeResults :: (Summarizable s, TRun a s) =>
      a                                                            -- ^ The module to be evaluated
-  -> [TestStr]                                                    -- ^ Tests we used to run analysis
-  -> (Mutant, [InterpreterOutput s])                              -- ^ The mutant and its corresponding output of test runs.
+  -> String                                                       -- ^ Tests we used to run analysis
+  -> (Mutant, InterpreterOutput s)                              -- ^ The mutant and its corresponding output of test runs.
   -> MutantSummary                                                -- ^ Returns a summary of the run for the mutant
-summarizeResults m tests (mutant, ioresults) = case last results of -- the last result should indicate status because we dont run if there is error.
+summarizeResults m testCmd (mutant, ioresults) = case results of -- the last result should indicate status because we dont run if there is error.
   Left err -> MSumError mutant (show err) logS
   Right out -> myresult out
-  where results = map _io ioresults
+  where results = _io ioresults
         myresult out | isSuccess out = MSumAlive mutant logS
                      | isFailure out = MSumKilled mutant logS
                      | otherwise     = MSumOther mutant logS
-        logS :: [Summary]
-        logS = zipWith (summarize mutant) tests ioresults
+        logS :: Summary
+        logS = summarize mutant testCmd ioresults
         summarize = summarize_ m
 
 -- | Run all tests on a mutant
 evalMutant :: (Typeable t, Summarizable t) =>
      Ghci
-  -> [TestStr]                                                     -- ^ The tests to be used
+  -> FilePath                                                     -- ^ Test file
+  -> String                                                      -- ^ Test Command
   -> Mutant                                                       -- ^ Mutant being tested
-  -> IO [InterpreterOutput t]                                     -- ^ Returns the result of test runs
-evalMutant ghci tests Mutant{..} = do
+  -> IO (InterpreterOutput t)                                     -- ^ Returns the result of test runs
+evalMutant ghci testFile testCmd Mutant{..} = do
   -- Hint does not provide us a way to evaluate the module without
   -- writing it to disk first, so we go for this hack.
   -- We write the temporary file to disk, run interpreter on it, get
@@ -79,9 +82,9 @@ evalMutant ghci tests Mutant{..} = do
 
   writeFile mutantFile _mutant
   let logF = mutantFile ++ ".log"
-  _ <- exec ghci (":l " <> mutantFile)
+  _ <- exec ghci (":l " <> testFile <> " " <> mutantFile)
   print "*"
-  stopFast (evalTest ghci logF) tests
+  evalTest ghci logF testCmd
 
 -- | Stop mutant runs at the first sign of problems (invalid mutants or test
 -- failure).
@@ -113,11 +116,13 @@ showE (I.GhcException e) = "GhcException: " ++ e
 evalTest :: forall a. (Typeable a, Summarizable a) =>
     Ghci
  -> String                                 -- ^ The file where we will write the stdout and stderr during the run.
- -> TestStr                                -- ^ The test to be run
+ -> String                                -- ^ The test to be run
  -> IO (InterpreterOutput a)               -- ^ Returns the output of given test run
-evalTest ghci logF test = do
-  -- val <- withArgs [] $ catchOutput logF $ I.runInterpreter (evalMethod mutantFile test)
-  val <- Right . parseResult . last <$> exec ghci test
+evalTest ghci logF testCmd = do
+  res <- exec ghci testCmd
+  putStrLn "********************"
+  print res
+  let val = Right $ parseResult res
   return Io {_io = val, _ioLog = logF}
 
 -- | Given the filename, modulename, test to evaluate, evaluate, and return result as a pair.
@@ -139,19 +144,17 @@ evalMethod fileName evalStr = do
 -- | Summarize the entire run. Passed results are per mutant
 fullSummary :: (Show b, Summarizable b, TRun a b) =>
      a                                      -- ^ The module
-  -> [TestStr]                              -- ^ The list of tests we used
-  -> [[InterpreterOutput b]]                -- ^ The test ouput (per mutant, (per test))
+  -> String                                 -- ^ The list of tests we used
+  -> [InterpreterOutput b]                -- ^ The test ouput (per mutant, (per test))
   -> MAnalysisSummary                       -- ^ Returns the full summary of the run
-fullSummary m _tests results = MAnalysisSummary {
+fullSummary m _testCmd results = MAnalysisSummary {
   _maOriginalNumMutants = -1,
   _maCoveredNumMutants = -1,
   _maNumMutants = length results,
   _maAlive = length alive,
   _maKilled = length fails,
   _maErrors= length errors}
-  where res = map (map _io) results
-        lasts = map last res -- get the last test runs
-        (errors, completed) = partitionEithers lasts
+  where res = map _io results
+        (errors, completed) = partitionEithers res
         fails = filter (failure_ m) completed -- look if others failed or not
         alive = filter (success_ m) completed
-

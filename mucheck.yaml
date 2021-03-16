@@ -1,0 +1,6 @@
+tixFile: sample-test.tix
+mutantModule: Examples/AssertCheckTest.hs
+testRunner: AssertCheck
+testFile: Examples/Main.hs
+testCommand: runAllTests
+ghcidCommand: "stack ghci MuCheck:lib MuCheck:sample-test"

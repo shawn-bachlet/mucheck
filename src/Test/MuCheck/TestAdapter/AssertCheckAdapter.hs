@@ -1,6 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving, DeriveDataTypeable, TypeSynonymInstances, MultiParamTypeClasses #-}
 -- | Module for using quickcheck properties
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TypeFamilies #-}
 module Test.MuCheck.TestAdapter.AssertCheckAdapter where
 import Test.MuCheck.TestAdapter
 import Test.MuCheck.TestAdapter.AssertCheck as A
@@ -19,9 +21,9 @@ instance Summarizable AssertCheckSummary where
   isFailure A.AssertFailure = True
   isFailure A.AssertSuccess = False
   isOther   _               = False
-  parseResult = \case
-    "AssertSuccess" -> A.AssertSuccess
-    _ -> A.AssertFailure
+  parseResult xs = if all (== "Success") $ init xs
+                    then A.AssertSuccess
+                    else A.AssertFailure
 
 
 

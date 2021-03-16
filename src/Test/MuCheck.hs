@@ -1,5 +1,8 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE RecordWildCards #-}
 -- | MuCheck base module
+{-# LANGUAGE AllowAmbiguousTypes #-}
 module Test.MuCheck (mucheck, sampler) where
 
 import Control.Monad (liftM)
@@ -9,6 +12,7 @@ import Test.MuCheck.Utils.Common
 import Test.MuCheck.Interpreter (evaluateMutants, MutantSummary(..))
 import Test.MuCheck.TestAdapter
 import Test.MuCheck.AnalysisSummary
+import Test.MuCheck.Options (MuOptions(..))
 
 -- | Perform mutation analysis using any of the test frameworks that support
 -- Summarizable (essentially, after running it on haskell, we should be able to
@@ -19,18 +23,16 @@ import Test.MuCheck.AnalysisSummary
 -- > tFn = testSummary
 -- > mucheck tFn "Examples/QuickCheckTest.hs" ["quickCheckResult revProp"]
 
-mucheck :: (Show b, Summarizable b, TRun a b) =>
-     a                                                     -- ^ The module we are mutating
-  -> String                                                -- ^ The ghcid command
-  -> FilePath                                              -- ^ The HPC <coverage>.tix file
+mucheck :: forall a b. (Show b, Summarizable b, TRun a b) =>
+  MuOptions
   -> IO (MAnalysisSummary, [MutantSummary])                -- ^ Returns a tuple of full summary, and individual mutant results.
-mucheck moduleFile ghcidCmd tix = do
+mucheck MuOptions{..} = do
   -- get tix here.
-  (len, mutants) <- genMutants (getName moduleFile) tix
+  let moduleFile = toRun @a mutantModule
+  (len, mutants) <- genMutants (getName moduleFile) tixFile
   -- Should we do random sample on covering alone or on the full?
   smutants <- sampler defaultConfig mutants
-  tests <- getAllTests (getName moduleFile)
-  (fsum', msum) <- evaluateMutants moduleFile ghcidCmd smutants (map (genTest moduleFile) tests)
+  (fsum', msum) <- evaluateMutants moduleFile ghcidCommand testFile testCommand smutants
   -- set the original size of mutants. (We report the results based on original
   -- number of mutants, not just the covered ones.)
   let fsum = case len of

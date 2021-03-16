@@ -1,3 +1,6 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
 module Main where
 import System.Environment (getArgs)
 
@@ -5,18 +8,24 @@ import Test.MuCheck (mucheck)
 import Test.MuCheck.TestAdapter.AssertCheckAdapter
 import Test.MuCheck.TestAdapter
 import Test.MuCheck.Utils.Print
+import Test.MuCheck.Options (MuOptions(..), optionsFromFile)
+import Test.MuCheck.TestAdapter.HspecAdapter (HspecRun)
 
 main :: IO ()
 main = do
   val <- getArgs
   case val of
     ("-h" : _ ) -> help
-    ("-tix" : tix : ghcidCmd : file: _ ) -> do
-      (msum, _tsum) <- mucheck (toRun file :: AssertCheckRun) ghcidCmd tix
-      print msum
-    (ghcidCmd : file : _args) -> do
-      (msum, _tsum) <- mucheck (toRun file :: AssertCheckRun) ghcidCmd ""
-      print msum
+    (options : _) -> do
+      mOptions <- optionsFromFile options
+      case mOptions of
+        Nothing -> putStrLn "Could not parse options file"
+        Just opts -> do
+          (msum, _) <-
+            case testRunner opts of
+              AssertCheck -> mucheck @AssertCheckRun opts
+              Hspec -> mucheck @HspecRun opts
+          print msum
     _ -> error "Need function file [args]\n\tUse -h to get help"
 
 help :: IO ()

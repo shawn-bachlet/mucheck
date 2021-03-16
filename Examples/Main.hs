@@ -8,3 +8,10 @@ main = do
   assertCheckResult sortRev
   assertCheckResult sortSame
   assertCheckResult sortNeg
+
+runAllTests = do
+  assertCheckResult sortEmpty
+  assertCheckResult sortSorted
+  assertCheckResult sortRev
+  assertCheckResult sortSame
+  assertCheckResult sortNeg
