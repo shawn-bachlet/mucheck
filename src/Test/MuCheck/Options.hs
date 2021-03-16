@@ -9,7 +9,7 @@ import qualified Data.Yaml as Y
 import Test.MuCheck.TestAdapter (TestRunner(..))
 
 data MuOptions = MuOptions
-    { tixFile :: FilePath
+    { tixFile :: Maybe FilePath
     , mutantModule :: FilePath
     , testRunner :: TestRunner
     , testFile :: FilePath
