@@ -6,14 +6,14 @@
 module Test.MuCheck (mucheck, sampler) where
 
 import Control.Monad (liftM)
-import Test.MuCheck.Mutation
-import Test.MuCheck.Config
-import Test.MuCheck.Utils.Common
-import Test.MuCheck.Interpreter (evaluateMutants, MutantSummary(..))
-import Test.MuCheck.TestAdapter
-import Test.MuCheck.AnalysisSummary
-import Test.MuCheck.Options (MuOptions(..))
 import Data.Maybe (fromMaybe)
+import Test.MuCheck.AnalysisSummary
+import Test.MuCheck.Config
+import Test.MuCheck.Interpreter (MutantSummary(..), evaluateMutants)
+import Test.MuCheck.Mutation
+import Test.MuCheck.Options (MuOptions(..))
+import Test.MuCheck.TestAdapter
+import Test.MuCheck.Utils.Common
 
 -- | Perform mutation analysis using any of the test frameworks that support
 -- Summarizable (essentially, after running it on haskell, we should be able to
@@ -30,7 +30,7 @@ mucheck :: forall a b. (Show b, Summarizable b, TRun a b) =>
 mucheck MuOptions{..} = do
   -- get tix here.
   let moduleFile = toRun @a mutantModule
-  (len, mutants) <- genMutants (getName moduleFile) $ fromMaybe "" tixFile
+  (len, mutants) <- genMutants ghcidCommand (getName moduleFile) $ fromMaybe "" tixFile
   -- Should we do random sample on covering alone or on the full?
   smutants <- sampler defaultConfig mutants
   (fsum', msum) <- evaluateMutants moduleFile ghcidCommand testFile testCommand smutants

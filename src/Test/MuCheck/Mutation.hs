@@ -6,8 +6,13 @@ import Control.Monad (liftM)
 import Data.Generics (Typeable, listify, mkMp)
 import Data.List ((\\), nub, partition, permutations)
 
-import Language.Haskell.Exts (parseModule)
-import Language.Haskell.Exts.Parser (fromParseResult)
+import Data.Maybe (mapMaybe)
+import Debug.Trace (traceShowId)
+import Language.Haskell.Exts (baseFixities, parseModule)
+import Language.Haskell.Exts.Extension (Extension(EnableExtension))
+import Language.Haskell.Exts.Parser
+  ( ParseMode(ParseMode), ParseMode, fromParseResult, parseModuleWithMode
+  )
 import Language.Haskell.Exts.Pretty (prettyPrint)
 import Language.Haskell.Exts.SrcLoc (SrcSpan(SrcSpan), SrcSpanInfo(SrcSpanInfo))
 import Language.Haskell.Exts.Syntax
@@ -17,6 +22,7 @@ import Language.Haskell.Exts.Syntax
   , Match(Match), Module(Module), ModuleHead(ModuleHead), ModuleName(ModuleName)
   , Name(Ident, Symbol), Pat(PVar), QName(UnQual), Stmt(Qualifier)
   )
+import Language.Haskell.Ghcid (exec, startGhci, stopGhci)
 import Test.MuCheck.Config
   ( Config(muOp), FnOp(_fns, _type), FnType(FnIdent, FnSymbol), MuVar(..), defaultConfig
   )
@@ -28,11 +34,13 @@ import Test.MuCheck.TestAdapter (Mutant(..), toMutant)
 import Test.MuCheck.Tix (Span, getUnCoveredPatches, insideSpan, toSpan)
 import Test.MuCheck.Utils.Common (apTh, choose, spread)
 import Test.MuCheck.Utils.Syb (once, relevantOps)
+import Text.Read (readMaybe)
 
 -- | The `genMutants` function is a wrapper to genMutantsWith with standard
 -- configuraton
 genMutants ::
-     FilePath           -- ^ The module we are mutating
+     String
+  -> FilePath           -- ^ The module we are mutating
   -> FilePath           -- ^ Coverage information for the module
   -> IO (Int,[Mutant]) -- ^ Returns the covering mutants produced, and original length.
 genMutants = genMutantsWith defaultConfig
@@ -43,15 +51,35 @@ genMutants = genMutantsWith defaultConfig
 -- of mutants produced.
 genMutantsWith ::
      Config                     -- ^ The configuration to be used
+  -> String 
   -> FilePath                   -- ^ The module we are mutating
   -> FilePath                   -- ^ Coverage information for the module
   -> IO (Int, [Mutant])         -- ^ Returns the covered mutants produced, and the original number
-genMutantsWith _config filename  tix = do
+genMutantsWith _config ghcidCmd filename  tix = do
       f <- readFile filename
+      (ghci, _) <- startGhci ghcidCmd Nothing
+        (const . const $ pure ())
+      language <- exec ghci ":show language" 
+      stopGhci ghci
+      let baseLanguage = read . drop 18  . head $ language
+      print "blah............................"
+      let 
+        extensionStrings :: [String]
+        extensionStrings = fmap (drop 4) . drop 2 $ language
+        extensions = mapMaybe (fmap EnableExtension . readMaybe) extensionStrings 
+        parseMode = ParseMode 
+            "unknown.hs" 
+            baseLanguage
+            extensions
+            False 
+            False 
+            (Just baseFixities)
+            False
+        extensions' = unlines $ fmap (\x -> "{-# LANGUAGE " <> x <> " #-}") extensionStrings
+        modul = getModuleName $ getASTFromStr parseMode (extensions' <> f)
+        mutants :: [Mutant]
+        mutants = genMutantsForSrc defaultConfig parseMode (extensions' <> f)
 
-      let modul = getModuleName (getASTFromStr f)
-          mutants :: [Mutant]
-          mutants = genMutantsForSrc defaultConfig f
 
       -- We have a choice here. We could allow users to specify test specific
       -- coverage rather than a single coverage. This can further reduce the
@@ -78,10 +106,11 @@ getModuleName _ = ""
 -- is defined, and returns the mutated sources
 genMutantsForSrc ::
      Config                   -- ^ Configuration
+  -> ParseMode
   -> String                   -- ^ The module we are mutating
   -> [Mutant] -- ^ Returns the mutants
-genMutantsForSrc config src = map (toMutant . apTh (prettyPrint . withAnn)) $ programMutants config ast
-  where origAst = getASTFromStr src
+genMutantsForSrc config parseMode src = map (toMutant . apTh (prettyPrint . withAnn)) $ programMutants config ast
+  where origAst = getASTFromStr parseMode src
         (onlyAnn, noAnn) = splitAnnotations origAst
         ast = putDecl origAst noAnn
         withAnn mast = putDecl mast $ getDecl mast ++ onlyAnn
@@ -155,8 +184,8 @@ removeOneElem l = choose l (length l - 1)
 -- AST/module-related operations
 
 -- | Returns the AST from the file
-getASTFromStr :: String -> Module_
-getASTFromStr fname = fromParseResult $ parseModule fname
+getASTFromStr :: ParseMode -> String -> Module_
+getASTFromStr parseMode file = fromParseResult $ parseModuleWithMode parseMode file
 
 -- | get all annotated functions
 getAnn :: Module_ -> String -> [String]
@@ -167,14 +196,6 @@ getAnn m s =  [conv name | Ann _l name _exp <- listify isAnn m]
         isAnn _ = False
         conv (Symbol _l n) = n
         conv (Ident _l n) = n
-
--- | given the module name, return all marked tests
-getAllTests :: String -> IO [String]
-getAllTests modname = liftM allTests $ readFile modname
-
--- | Given module source, return all marked tests
-allTests :: String -> [String]
-allTests modsrc = getAnn (getASTFromStr modsrc) "Test"
 
 -- | The name of a function
 functionName :: Decl_ -> String
