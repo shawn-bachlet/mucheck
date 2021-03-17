@@ -83,7 +83,6 @@ evalMutant ghci testFile testCmd Mutant{..} = do
   writeFile mutantFile _mutant
   let logF = mutantFile ++ ".log"
   _ <- exec ghci (":l " <> testFile <> " " <> mutantFile)
-  print "*"
   evalTest ghci logF testCmd
 
 -- | Stop mutant runs at the first sign of problems (invalid mutants or test
@@ -120,8 +119,6 @@ evalTest :: forall a. (Typeable a, Summarizable a) =>
  -> IO (InterpreterOutput a)               -- ^ Returns the output of given test run
 evalTest ghci logF testCmd = do
   res <- exec ghci testCmd
-  putStrLn "********************"
-  print res
   let val = Right $ parseResult res
   return Io {_io = val, _ioLog = logF}
 

@@ -8,10 +8,10 @@
 module Test.MuCheck.TestAdapter.HspecAdapter where
 
 import Data.Char (isDigit)
-import qualified Test.Hspec.Core.Runner as Hspec
-import Test.MuCheck.TestAdapter
-import Data.Typeable
 import Data.List (isInfixOf)
+import Data.Typeable
+import Test.MuCheck.TestAdapter
+import qualified Test.Hspec.Core.Runner as Hspec
 
 deriving instance Typeable Hspec.Summary
 type HspecSummary = Hspec.Summary
@@ -19,7 +19,7 @@ type HspecSummary = Hspec.Summary
 -- | Summarizable instance of `Hspec.Summary`
 instance Summarizable HspecSummary where
   testSummary _mutant _test result = Summary $ _ioLog result
-  isSuccess (Hspec.Summary { Hspec.summaryExamples = _, Hspec.summaryFailures = sf } ) = sf == 0
+  isSuccess Hspec.Summary { Hspec.summaryExamples = _, Hspec.summaryFailures = sf } = sf == 0
   parseResult xs =
     let
       s = head $ filter (\l -> "examples" `isInfixOf` l && "failures" `isInfixOf` l) xs
@@ -28,7 +28,7 @@ instance Summarizable HspecSummary where
     in
       Hspec.Summary (read @Int ex) (read @Int fs)
 
-data HspecRun = HspecRun String
+newtype HspecRun = HspecRun String
 
 instance TRun HspecRun HspecSummary where
   genTest _m tstfn = "assertCheckResult " ++ tstfn

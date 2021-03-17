@@ -2,13 +2,11 @@
 -- | This module handles the mutation of different patterns.
 module Test.MuCheck.Mutation where
 
-import Control.Monad (liftM)
 import Data.Generics (Typeable, listify, mkMp)
 import Data.List ((\\), nub, partition, permutations)
 
 import Data.Maybe (mapMaybe)
-import Debug.Trace (traceShowId)
-import Language.Haskell.Exts (baseFixities, parseModule)
+import Language.Haskell.Exts (baseFixities, readExtensions)
 import Language.Haskell.Exts.Extension (Extension(EnableExtension))
 import Language.Haskell.Exts.Parser
   ( ParseMode(ParseMode), ParseMode, fromParseResult, parseModuleWithMode
@@ -57,20 +55,21 @@ genMutantsWith ::
   -> IO (Int, [Mutant])         -- ^ Returns the covered mutants produced, and the original number
 genMutantsWith _config ghcidCmd filename  tix = do
       f <- readFile filename
+      -- To allow parsing to succeed in code bases where language extensions are placed in configuration
+      -- files we have to open ghci and see what is inscope after the initial load but before parsing
       (ghci, _) <- startGhci ghcidCmd Nothing
         (const . const $ pure ())
       language <- exec ghci ":show language" 
       stopGhci ghci
-      let baseLanguage = read . drop 18  . head $ language
-      print "blah............................"
       let 
-        extensionStrings :: [String]
+        baseLanguage = read . drop 18  . head $ language
+        fileExtensions = readExtensions f
         extensionStrings = fmap (drop 4) . drop 2 $ language
         extensions = mapMaybe (fmap EnableExtension . readMaybe) extensionStrings 
         parseMode = ParseMode 
             "unknown.hs" 
             baseLanguage
-            extensions
+            (extensions <> maybe [] snd fileExtensions)
             False 
             False 
             (Just baseFixities)
